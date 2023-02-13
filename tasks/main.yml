@@ -1,0 +1,73 @@
+---
+# install and configure postgresql
+# https://techviewleo.com/how-to-install-postgresql-database-on-amazon-linux/
+- name: Install postgresql14
+  shell: 
+    cmd: |
+      sudo amazon-linux-extras install -y epel
+
+      sudo tee /etc/yum.repos.d/pgdg.repo<<EOF
+      [pgdg14]
+      name=PostgreSQL 14 for RHEL/CentOS 7 - x86_64
+      baseurl=http://download.postgresql.org/pub/repos/yum/14/redhat/rhel-7-x86_64
+      enabled=1
+      gpgcheck=0
+      EOF
+
+      sudo yum -y makecache
+      sudo yum install -y postgresql14 postgresql14-server
+      sudo /usr/pgsql-14/bin/postgresql-14-setup initdb
+    # The file that enables the service. I'm assuming it works when it exists.
+    # But ideally we should check if `systemctl status postgresql-14` outputs `active (running)`
+    creates: /etc/systemd/system/multi-user.target.wants/postgresql-14.service
+
+- name: Start and enable postgresql service
+  service:
+    name: postgresql-14
+    state: started
+    enabled: yes
+
+# Packages needed for community.postgresql.postgresql_user module
+# https://stackoverflow.com/a/58468619
+- name: Install yum packages needed for postgresql_user module
+  yum:
+    name: 
+      - "@Development tools"
+      - postgresql-libs
+      - postgresql-devel
+      - postgresql-contrib
+      - python3-devel # Important that this is compatible with the version used by ansible (= installed on the system)
+    state: present
+
+- name: Install pip packages needed for postgresql_user module
+  ansible.builtin.pip:
+    executable: pip3 # Important that this is compatible with the version used by ansible (= installed on the system)
+    name: 
+      - psycopg2-binary
+      - psycopg2
+
+- name: Change postgresql password
+  become_user: postgres
+  community.postgresql.postgresql_user:
+    name: postgres
+    password: "{{ postgres_password }}"
+
+# Got from this article: https://damonvjanis.medium.com/optimizing-for-free-hosting-elixir-deployments-6bfc119a1f44
+- name: Make postgresql port available for outside connections
+  become_user: postgres
+  community.postgresql.postgresql_set:
+    name: listen_addresses
+    value:  "{{ '*' if allow_remote_connections|bool == true else 'localhost' }}"
+  notify:
+    - Restart postgresql service
+- name: Allow remote postgresql connections
+  become_user: postgres
+  community.postgresql.postgresql_pg_hba:
+    dest: /var/lib/pgsql/14/data/pg_hba.conf
+    contype: host
+    users: all
+    source: all
+    state: "{{ 'present' if allow_remote_connections|bool == true else 'absent' }}"
+    create: true
+  notify:
+    - Restart postgresql service

@@ -1,2 +1,11 @@
 ---
-# handlers file for ansible-role-postgresql-14-amazon-linux-2
+# Notifying the same handler multiple times will result in executing
+# the handler only once regardless of how many tasks notify it. 
+# For example, if multiple tasks update a configuration file and notify a 
+# handler to restart Apache, Ansible only bounces Apache once to avoid unnecessary restarts.
+# https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_handlers.html#handlers
+- name: Restart postgresql service
+  service:
+    name: postgresql-14
+    state: restarted
+    enabled: yes

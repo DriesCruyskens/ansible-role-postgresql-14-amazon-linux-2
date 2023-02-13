@@ -1,0 +1,3 @@
+---
+postgres_password: "postgres" # This is the default password for the 'postgres' user after PostgreSQL installation
+allow_remote_connections: no
