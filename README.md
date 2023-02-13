@@ -11,6 +11,8 @@ Installing PostgreSQL 14 on Amazon Linux 2 wasn't so straight forward as I had h
 - Optionally changes the `postgres` user's password
 - Optionally allows remote connections
 
+When you allow remote connections, you can connect to your postgres database using the 'postgres' user and your specified password (or the default: 'postgres').
+
 If you need more customisability, copy and adjust the source code.
 
 Requirements
@@ -47,7 +49,7 @@ Example Playbook
   roles: 
     - role: driescruyskens.postgresql_14_amazon_linux_2
       vars:
-        - postgres_password: {{ SECURE_PASSWORD }}
+        - postgres_password: "{{ SECURE_PASSWORD }}"
         - allow_remote_connections: yes
 ```
 
